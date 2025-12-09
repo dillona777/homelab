@@ -112,8 +112,8 @@ A key focus of this lab is integrating **PKI**, **AAA**, and multiple access met
   - `topology-gns3.png` – Virtual GNS3 site topology
 - `configs/` (planned)
   - Sanitized IOS / ASA / Linux config snippets for key components
-- `notes/` (planned)
-  - Design decisions and troubleshooting write-ups.
+- `notes/`
+  - Design decisions, usage, and implementation documentation for various components
 
 ---
 
