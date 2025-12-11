@@ -110,7 +110,7 @@ A key focus of this lab is integrating **PKI**, **AAA**, and multiple access met
 - `docs/`
   - `topology-physical.png` – Physical homelab + Proxmox topology
   - `topology-gns3.png` – Virtual GNS3 site topology
-- `configs/` (planned)
+- `configs/` 
   - Sanitized IOS / ASA / Linux config snippets for key components
 - `notes/`
   - Design decisions, usage, and implementation documentation for various components
