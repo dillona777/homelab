@@ -73,12 +73,13 @@ A key focus of this lab is integrating **PKI**, **AAA**, and multiple access met
   - Exposes a **SCEP enrollment endpoint**, allowing devices (ASA, routers, etc.) to obtain certificates automatically.
 - **802.1X with PEAP + MSCHAPv2**
   - Switchports authenticate clients via **PEAP + MSCHAPv2** against the central RADIUS server.
-  - The **PEAP outer TLS tunnel** is terminated using a certificate issued by the **2811’s root CA**, enrolled via SCEP.
-- **IPsec authentication**
-  - The IPsec + GRE tunnel (T1) between R1 and the GNS3 Edge uses certificates from the same root CA, tying together:
-    - RADIUS / 802.1X  
-    - Web management (ASDM, device HTTPS)  
-    - IPsec authentication
+  - PEAP creates an outer TLS tunnel terminated by the FreeRADIUS server using the server certificate configured on the FreeRADIUS host.
+    *(Note: the current FreeRADIUS PEAP certificate is not yet signed by the lab 2811 root CA.)*
+- **Certificate-based IPsec authentication**
+  - The IPsec + GRE tunnel (T1) between R1 and the GNS3 Edge uses **SCEP-enrolled certificates** issued by the 2811 root CA (**RSA signature authentication**).
+- **How these pieces tie together (current vs planned)**
+  - **Current:** PKI is used for **IPsec authentication** (and device HTTPS/ASDM where applicable). AAA/RADIUS is used for **device admin** and **802.1X authentication**.
+  - **Planned:** Issue a CA-signed server certificate for FreeRADIUS so PEAP server certificate validation chains to the lab root CA.
 
 ---
 
