@@ -1,134 +1,76 @@
-# Hybrid Network Security Homelab
+# Hybrid Cisco Networking Homelab
 
-This repo documents my **hybrid network-security homelab**: a physical Cisco + Proxmox rack that is tightly integrated with a virtual GNS3 site via an **IPsec + GRE (T1) site-to-site tunnel**. I use this environment to practice routing, VPNs, firewalling, AAA/802.1X, PKI, protocol-level security, and more as I continue to study.
+A hybrid Cisco networking lab that pairs a physical Cisco + Proxmox rack with a virtual GNS3 site, joined by a site-to-site GRE-over-IPsec tunnel. I use it to build hands-on depth in enterprise routing and switching, with network services, secure management, and protocol validation layered on top.
 
----
-
-## High-Level Topology
-
-### Physical Core – On-Prem Rack
-
-![Physical homelab topology](docs/topology-physical.png)
-
-Real hardware layout:
-
-![Physical rack photo](docs/physicalsnapshot.jpg)
-
-
-**Highlights**
-
-- Cisco **2811 ISR** as WAN edge, performing static PAT to the home LAN.
-- Cisco **Catalyst 3560X** (L3) and **2960X** (L2) switches providing VLANs:
-  - VLAN 10 – Servers  
-  - VLAN 20 – Hosts  
-  - VLAN 99 – Management / NTP  
-  - VLAN 200 – IPsec / GRE transit segment (toward GNS3 Edge)
-- Dell **PowerEdge R720** and Lenovo **RS140** running **Proxmox VE**.
-- Core services:
-    - **NTP** served exclusively from the **R720 Proxmox host** on **VLAN 99**  
-    → used as the time source for all **Cisco routers/switches/ASA**; most lab VMs rely on their own Chrony configuration.
-  - **AAA / RADIUS** (for device + 802.1X auth) on VLAN 10.
-  - **Authoritative DNS** for `*.gootas.org` on VLAN 10.
-- The **GNS3 VM** runs on the R720 and forms the bridge between the physical rack and the virtual GNS3 site.
+> **Status:** Originally built while studying CCNP Security; now transitioning focus to **CCNP Enterprise (ENCOR)**. The physical core is stable; the GNS3 virtual site is being rebuilt around enterprise routing, switching, and automation. The security work is kept here as a documented foundation — see [Security Foundations](#security-foundations).
 
 ---
 
-### Virtual Site – Inside GNS3
+## Physical Core (On-Prem Rack)
 
-![GNS3 site topology](docs/topology-gns3.png)
+The physical side is the stable foundation of the lab and where most of the switching work lives.
 
-**Highlights**
+- **Cisco 2811 ISR** — WAN edge; static PAT to the home LAN; also the lab's GRE-over-IPsec tunnel endpoint.
+- **Cisco Catalyst 3560X (L3)** — core switch and default gateway: inter-VLAN routing via SVIs, per-VLAN DHCP, Rapid-PVST with root-priority tuning, and an LACP EtherChannel to the access switch.
+- **Cisco Catalyst 2960X (L2)** — access switch: 802.1X-enabled ports, Rapid-PVST, LACP uplink to the core.
+- **Dell PowerEdge R720 + Lenovo RS140** — Proxmox VE hosts. The R720 runs the GNS3 VM that bridges the physical rack to the virtual site, and serves as the lab's single NTP source on the management VLAN.
 
-- **T1 – IPsec + GRE tunnel** between:
-  - Physical **2811 ISR (R1)** and  
-  - **GNS3 Edge router**
-- Tunnel design:
-  - **Overlay:** `10.255.255.0/30`  
-    - R1 `tun0` – `10.255.255.2`  
-    - EDGE `tun0` – `10.255.255.1`
-  - **Underlay:** not bound to a single VLAN  
-    - R1 side: `192.168.100.1/30` on the LAN-facing link  
-    - EDGE side: `172.16.200.2/29` on **VLAN 200** inside the GNS3 site
-- **EIGRP AS 1** runs **only between**:
-  - The **ASAv outside interface** and  
-  - The **inside-facing interface** of the GNS3 Edge router  
-  (not across the VLAN 200 underlay itself).
-- **OSPF Area 0** core with MD5 authentication:
-  - Internal routers and the SNMPv3 NMS segment all participate in OSPF with MD5 auth on area-0 links.
-- **Cisco ASAv firewall** providing:
-  - Inside / DMZ segmentation  
-  - ASDM access integrated with central RADIUS/AAA
-- **SNMPv3 NMS** Docker container:
-  - Deployed primarily to validate **SNMPv3 security (auth/priv)** and walk devices,  
-    not as a full monitoring stack.
+**VLANs:** 10 (Servers) · 20 (Hosts / Endpoints) · 99 (Management / NTP) · 200 (IPsec/GRE transit)
 
----
+**Core services:** centralized AAA/RADIUS (device login + 802.1X), authoritative DNS, and NTP from a single trusted host on VLAN 99.
 
-## PKI, AAA, and 802.1X / IPsec Integration
+Addressing detail: [`notes/ip-plan.md`](notes/ip-plan.md)
 
-A key focus of this lab is integrating **PKI**, **AAA**, and multiple access methods:
+## Virtual Site (GNS3)
 
-- **Root CA on the 2811 ISR**
-  - Acts as the root certification authority for the lab.
-  - Exposes a **SCEP enrollment endpoint**, allowing devices (ASA, routers, etc.) to obtain certificates automatically.
-- **802.1X with PEAP + MSCHAPv2**
-  - Switchports authenticate clients via **PEAP + MSCHAPv2** against the central RADIUS server.
-  - PEAP creates an outer TLS tunnel terminated by the FreeRADIUS server using the server certificate configured on the FreeRADIUS host.
-    *(Note: the current FreeRADIUS PEAP certificate is not yet signed by the lab 2811 root CA.)*
-- **Certificate-based IPsec authentication**
-  - The IPsec + GRE tunnel (T1) between R1 and the GNS3 Edge uses **SCEP-enrolled certificates** issued by the 2811 root CA (**RSA signature authentication**).
-- **How these pieces tie together (current vs planned)**
-  - **Current:** PKI is used for **IPsec authentication** (and device HTTPS/ASDM where applicable). AAA/RADIUS is used for **device admin** and **802.1X authentication**.
-  - **Planned:** Issue a CA-signed server certificate for FreeRADIUS so PEAP server certificate validation chains to the lab root CA.
+A virtual routed domain bridged to the physical core over the GRE-over-IPsec tunnel.
 
----
+> **Being rebuilt.** The previous virtual site was an OSPF/EIGRP + ASAv security topology. It's being torn down and rebuilt around CCNP Enterprise topics (advanced routing incl. BGP, redistribution, and automation). This section will be updated as the new topology comes online.
 
-## What I’m Practicing Here
+## What I'm Practicing
 
-- Hybrid **physical + virtual** topology design (Cisco + Proxmox + GNS3).
-- **IPsec + GRE** site-to-site tunneling with asymmetric underlay subnets.
-- Routing:
-  - OSPF Area 0 with **MD5 authentication**
-  - Targeted **EIGRP** peering between ASA and GNS3 Edge
-- Firewalling and DMZ design with **Cisco ASA / ASAv**:
-  - NAT / PAT, security levels, ACLs, ASDM
-- **Centralized AAA / RADIUS**:
-  - Network device login
-  - **802.1X PEAP + MSCHAPv2** for port access
-- **PKI & SCEP**:
-  - 2811 as root CA + SCEP server
-  - Cert-based IPsec, HTTPS, and 802.1X server certs.
-- **Secure management protocols**:
-  - NTP over a dedicated management VLAN from a single trusted source
-  - SNMPv3 lab (auth/priv) to validate configuration and behavior.
-- **Packet capture & protocol validation with Wireshark**:
-  - Capturing on physical and virtual links to inspect IPsec ESP/GRE encapsulation, OSPF MD5, EIGRP, 802.1X (PEAP/EAP + RADIUS), SNMPv3 flows, etc to confirm everything is behaving as designed.
+**Routing & Switching (primary focus)**
+- L3 switching: inter-VLAN routing, SVIs, per-VLAN DHCP
+- Spanning Tree (Rapid-PVST) with root/priority tuning
+- EtherChannel (LACP)
+- OSPF and EIGRP, static routing — moving into BGP and redistribution
+- GRE-over-IPsec site-to-site tunneling between the physical and virtual sites
 
----
+**Network Services & Assurance**
+- NTP from a single trusted source over a dedicated management VLAN
+- SNMPv3 (auth/priv) validation
+- Packet capture and protocol validation with Wireshark ([`notes/wireshark-lab-notes.md`](notes/wireshark-lab-notes.md))
+
+**Security Foundations** — see below.
+
+## Security Foundations
+
+Built while studying CCNP Security and kept as a documented foundation rather than the current focus:
+
+- **AAA / RADIUS** — centralized device login and 802.1X authentication (FreeRADIUS on VLAN 10)
+- **802.1X** — PEAP + MS-CHAPv2 port authentication on the access switch
+- **Cisco ASA** — inside/DMZ/outside segmentation, security levels, NAT, ACLs
+- **PKI / SCEP** — 2811 as root CA issuing certificates for cert-based IPsec
+- **Secure management** — SNMPv3 (auth/priv), NTP from a single trusted source
+
+Design detail: [`notes/pki-aaa-design.md`](notes/pki-aaa-design.md)
 
 ## Repository Structure
 
-- `docs/`
-  - `topology-physical.png` – Physical homelab + Proxmox topology
-  - `topology-gns3.png` – Virtual GNS3 site topology
-- `configs/` 
-  - Sanitized IOS / ASA / Linux config snippets for key components
-- `notes/`
-  - Design decisions, usage, and implementation documentation for various components
+```
+docs/      Topology diagrams
+configs/   Sanitized, feature-focused config snippets for the physical devices
+notes/     Design decisions, IP plan, and protocol-validation notes
+```
 
----
+## Roadmap (CCNP Enterprise)
 
-## Future Work
-
-- Add sanitized router/switch/ASA configs (with sample IPsec, OSPF MD5, and 802.1X snippets).
-- Document the **T1 IPsec + GRE** setup step-by-step.
-- Add lab “scenarios” (e.g., break/fix).
-- Expand SNMPv3 use into real monitoring or alerting.
-- Continue to learn and implement more network security concepts.
-
----
+- Rebuild the GNS3 site for enterprise routing: OSPF areas, EIGRP, **BGP**, redistribution, and path control
+- Scenario-based labs (build + break/fix), documented one per scenario
+- Network assurance: syslog, NetFlow, IP SLA, SPAN
+- Automation: Python + NETCONF/RESTCONF and Ansible against lab devices
+- Refresh topology diagrams as the new virtual site comes online
 
 ## About Me
 
-Homelab built and maintained while studying and working towards advanced network/security certifications (CCNP Security currently).  
-For more about my background: **\[www.linkedin.com/in/dillon-alfieri-network\]**.
+Hybrid homelab built and maintained while studying toward advanced Cisco certifications (**CCNP Enterprise** — currently working through ENCOR). More about my background: [linkedin.com/in/dillon-alfieri-network](https://www.linkedin.com/in/dillon-alfieri-network)
