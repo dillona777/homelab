@@ -9,12 +9,6 @@ A hybrid Cisco networking lab that pairs a physical Cisco + Proxmox rack with a 
 ## Physical Core (On-Prem Rack)
 
 ![Physical core — logical topology](docs/topology-physical.png)
-<details>
-<summary>Rack photo</summary>
-
-![Physical rack](docs/physicalsnapshot.jpg)
-
-</details>
 
 The physical side is the stable foundation of the lab and where most of the switching work lives.
 
@@ -29,11 +23,20 @@ The physical side is the stable foundation of the lab and where most of the swit
 
 Addressing detail: [`notes/ip-plan.md`](notes/ip-plan.md)
 
+<details>
+<summary>Rack photo</summary>
+
+![Physical rack](docs/physicalsnapshot.jpg)
+
+</details>
+
 ## Virtual Site (GNS3)
 
 A virtual routed domain bridged to the physical core over the GRE-over-IPsec tunnel.
 
-> **Being rebuilt.** The previous virtual site was an OSPF/EIGRP + ASAv security topology. It's being torn down and rebuilt around CCNP Enterprise topics (advanced routing incl. BGP, redistribution, and automation). This section will be updated as the new topology comes online.
+> **Being rebuilt.** The previous virtual site was an OSPF/EIGRP + ASAv security topology. It's being torn down and rebuilt around CCNP Enterprise topics (advanced routing incl. BGP, redistribution, and automation). This section and its diagram will be updated as the new topology comes online.
+
+<!-- ![GNS3 virtual topology](docs/topology-gns3.png)  <-- re-add once the new virtual site is built -->
 
 ## What I'm Practicing
 
@@ -51,6 +54,10 @@ A virtual routed domain bridged to the physical core over the GRE-over-IPsec tun
 
 **Security Foundations** — see below.
 
+## Scenarios
+
+Focused, self-contained labs — one concept each (goal, the config that mattered, what broke, takeaways). This is the main working section of the repo and grows as I work through new topics. See [`scenarios/`](scenarios/).
+
 ## Security Foundations
 
 Built while studying CCNP Security and kept as a documented foundation rather than the current focus:
@@ -66,18 +73,18 @@ Design detail: [`notes/pki-aaa-design.md`](notes/pki-aaa-design.md)
 ## Repository Structure
 
 ```
-docs/      Topology diagrams
-configs/   Sanitized, feature-focused config snippets for the physical devices
-notes/     Design decisions, IP plan, and protocol-validation notes
+docs/        Topology diagrams and rack photo
+scenarios/   Focused labs — one concept each: goal, config, what broke, takeaways
+notes/       Design decisions, IP plan, and protocol-validation notes
 ```
 
 ## Roadmap (CCNP Enterprise)
 
 - Rebuild the GNS3 site for enterprise routing: OSPF areas, EIGRP, **BGP**, redistribution, and path control
-- Scenario-based labs (build + break/fix), documented one per scenario
+- Grow the [scenarios](scenarios/) library (build + break/fix), one concept per writeup
 - Network assurance: syslog, NetFlow, IP SLA, SPAN
 - Automation: Python + NETCONF/RESTCONF and Ansible against lab devices
-- Refresh topology diagrams as the new virtual site comes online
+- Refresh the virtual-site diagram as the new topology comes online
 
 ## About Me
 
