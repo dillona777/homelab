@@ -8,6 +8,14 @@ A hybrid Cisco networking lab that pairs a physical Cisco + Proxmox rack with a 
 
 ## Physical Core (On-Prem Rack)
 
+![Physical core — logical topology](docs/topology-physical.png)
+<details>
+<summary>Rack photo</summary>
+
+![Physical rack](docs/physicalsnapshot.jpg)
+
+</details>
+
 The physical side is the stable foundation of the lab and where most of the switching work lives.
 
 - **Cisco 2811 ISR** — WAN edge; static PAT to the home LAN; also the lab's GRE-over-IPsec tunnel endpoint.
